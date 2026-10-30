@@ -1,0 +1,8 @@
+### API Đăng nhập (Login)
+POST http://localhost:3000/api/auth/login
+Content-Type: application/json
+
+{
+    "username": "admin",
+    "password": "123456"
+}
