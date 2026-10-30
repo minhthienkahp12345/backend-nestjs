@@ -12,6 +12,7 @@ import { Product } from './entities/product.entity';
 import { User } from './entities/user.entity';
 import { ProductsModule } from './products/products.module';
 import { OrdersModule } from './orders/orders.module';
+import { ReportsModule } from './reports/reports.module';
 
 @Module({
   imports: [
@@ -30,6 +31,7 @@ import { OrdersModule } from './orders/orders.module';
     CategoriesModule,
     ProductsModule,
     OrdersModule,
+    ReportsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
