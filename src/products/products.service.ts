@@ -68,6 +68,12 @@ export class ProductsService {
     return this.productsRepository.save(product);
   }
 
+  async updateImage(id: number, imageUrl: string): Promise<Product> {
+    const product = await this.findById(id);
+    product.imageUrl = imageUrl;
+    return this.productsRepository.save(product);
+  }
+
   private async findById(id: number): Promise<Product> {
     const product = await this.productsRepository.findOne({ where: { id } });
     if (!product) {

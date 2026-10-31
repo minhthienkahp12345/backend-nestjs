@@ -1,15 +1,21 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { InjectDataSource } from '@nestjs/typeorm';
 import { DataSource } from 'typeorm';
 import { Order, OrderStatus } from '../entities/order.entity';
 import { OrderItem } from '../entities/order-item.entity';
+import { ReportPeriod } from './dto/report-period.dto';
 
 @Injectable()
 export class ReportsService {
   constructor(@InjectDataSource() private readonly dataSource: DataSource) {}
 
-  async getDashboard() {
-    const { start, end } = this.todayRange();
+  async getDashboard(
+    period: ReportPeriod = ReportPeriod.DAY,
+    date?: string,
+    startDate?: string,
+    endDate?: string,
+  ) {
+    const { start, end } = this.periodRange(period, date, startDate, endDate);
     const orderRepository = this.dataSource.getRepository(Order);
 
     const summary = await orderRepository
@@ -87,6 +93,7 @@ export class ReportsService {
 
     return {
       summary: {
+        period,
         totalRevenue,
         completedOrders,
         averageOrderValue:
@@ -107,11 +114,64 @@ export class ReportsService {
     };
   }
 
-  private todayRange() {
+  private periodRange(
+    period: ReportPeriod,
+    date?: string,
+    startDate?: string,
+    endDate?: string,
+  ) {
+    if (Boolean(startDate) !== Boolean(endDate)) {
+      throw new BadRequestException(
+        'Cần chọn đầy đủ từ ngày và đến ngày',
+      );
+    }
+
+    if (startDate && endDate) {
+      const start = this.parseDate(startDate);
+      const end = this.parseDate(endDate);
+      if (end < start) {
+        throw new BadRequestException(
+          'Ngày kết thúc phải lớn hơn hoặc bằng ngày bắt đầu',
+        );
+      }
+      end.setDate(end.getDate() + 1);
+      return { start, end };
+    }
+
+    if (date) {
+      const start = this.parseDate(date);
+      const end = new Date(start);
+      end.setDate(end.getDate() + 1);
+      return { start, end };
+    }
+
     const start = new Date();
     start.setHours(0, 0, 0, 0);
+    if (period === ReportPeriod.WEEK) {
+      const day = start.getDay();
+      const daysSinceMonday = day === 0 ? 6 : day - 1;
+      start.setDate(start.getDate() - daysSinceMonday);
+    } else if (period === ReportPeriod.MONTH) {
+      start.setDate(1);
+    }
+
     const end = new Date(start);
-    end.setDate(end.getDate() + 1);
+    if (period === ReportPeriod.MONTH) end.setMonth(end.getMonth() + 1);
+    else if (period === ReportPeriod.WEEK) end.setDate(end.getDate() + 7);
+    else end.setDate(end.getDate() + 1);
     return { start, end };
+  }
+
+  private parseDate(value: string) {
+    const [year, month, day] = value.split('-').map(Number);
+    const parsed = new Date(year, month - 1, day);
+    if (
+      parsed.getFullYear() !== year ||
+      parsed.getMonth() !== month - 1 ||
+      parsed.getDate() !== day
+    ) {
+      throw new BadRequestException('Ngày báo cáo không hợp lệ');
+    }
+    return parsed;
   }
 }
